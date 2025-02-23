@@ -242,7 +242,6 @@ export const login = async (
             { id: 'hotel1', hotelname: mockHotels.hotel1.name },
             { id: 'hotel2', hotelname: mockHotels.hotel2.name },
           ],
-          roles: ['manager'],
         },
       },
     };

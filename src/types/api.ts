@@ -1,7 +1,6 @@
 export interface User {
   id: string;
   emailid: string;
-  roles: string[];
   hotels: Hotel[];
 }
 

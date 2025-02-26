@@ -214,6 +214,7 @@ api.interceptors.request.use((config) => {
   if (selectedHotel) {
     config.headers['X-Hotel-Id'] = selectedHotel;
   }
+  config.headers['X-User-Role'] = 'owner';
   return config;
 });
 
@@ -269,7 +270,15 @@ export const checkEmailExists = async (email: string) => {
       getEndpoint(config.endpoints.auth.checkEmail),
       { email }
     );
-    return response.data;
+    const data =
+      typeof response.data.body === "string"
+        ? JSON.parse(response.data.body)
+        : response.data.body || response.data;
+
+    if (data.status === "error") {
+      throw new Error(data.message);
+    }
+    return data.data;
   } catch (error) {
     throw handleApiError(error);
   }
@@ -289,7 +298,15 @@ export const forgotPassword = async (email: string) => {
       getEndpoint(config.endpoints.auth.forgotPassword),
       { email }
     );
-    return response.data;
+    const data =
+      typeof response.data.body === "string"
+        ? JSON.parse(response.data.body)
+        : response.data.body || response.data;
+
+    if (data.status === "error") {
+      throw new Error(data.message);
+    }
+    return data.data;
   } catch (error) {
     throw handleApiError(error);
   }
@@ -306,7 +323,15 @@ export const verifyCode = async (email: string, code: string) => {
       getEndpoint(config.endpoints.auth.verifyCode),
       { email, code }
     );
-    return response.data;
+    const data =
+      typeof response.data.body === "string"
+        ? JSON.parse(response.data.body)
+        : response.data.body || response.data;
+
+    if (data.status === "error") {
+      throw new Error(data.message);
+    }
+    return data.data;
   } catch (error) {
     throw handleApiError(error);
   }
@@ -328,10 +353,18 @@ export const resetPassword = async (
       {
         email,
         code,
-        newPassword: btoa(newPassword),
+        newPassword: newPassword,
       }
     );
-    return response.data;
+    const data =
+      typeof response.data.body === "string"
+        ? JSON.parse(response.data.body)
+        : response.data.body || response.data;
+
+    if (data.status === "error") {
+      throw new Error(data.message);
+    }
+    return data.data;
   } catch (error) {
     throw handleApiError(error);
   }

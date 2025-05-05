@@ -366,11 +366,12 @@ const ComparativeView: React.FC<ComparativeViewProps> = (props) => {
                   </Typography>
                   <Box mt={1}>
                     {Object.entries(
-                      data1.records.reduce((acc, room) => {
-                        acc[room.room_category] =
-                          (acc[room.room_category] || 0) + 1;
-                        return acc;
-                      }, {} as Record<string, number>)
+                      data1.records
+                        .filter(record => record.check_in_unixstamp !== null)
+                        .reduce((acc, record) => {
+                          acc[record.room_category] = (acc[record.room_category] || 0) + 1;
+                          return acc;
+                        }, {} as Record<string, number>)
                     ).map(([category, count]) => (
                       <Typography key={category} variant="subtitle1">
                         {category}: {count} rooms
@@ -429,11 +430,12 @@ const ComparativeView: React.FC<ComparativeViewProps> = (props) => {
                   </Typography>
                   <Box mt={1}>
                     {Object.entries(
-                      data2.records.reduce((acc, room) => {
-                        acc[room.room_category] =
-                          (acc[room.room_category] || 0) + 1;
-                        return acc;
-                      }, {} as Record<string, number>)
+                      data2.records
+                        .filter(record => record.check_in_unixstamp !== null)
+                        .reduce((acc, record) => {
+                          acc[record.room_category] = (acc[record.room_category] || 0) + 1;
+                          return acc;
+                        }, {} as Record<string, number>)
                     ).map(([category, count]) => (
                       <Typography key={category} variant="subtitle1">
                         {category}: {count} rooms

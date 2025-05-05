@@ -9,13 +9,16 @@ export interface Hotel {
   hotelname: string;
 }
 
+export interface JWTPayload {
+  sub: string;
+  iat: number;
+  exp: number;
+}
+
 export interface AuthResponse {
-  statusCode: number;
-  body: {
-    message: string;
-    token: string;
-    user: User;
-  };
+  message: string;
+  token: string;
+  user: User;
 }
 
 export interface OccupancyRecord {

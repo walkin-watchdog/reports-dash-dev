@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { format } from 'date-fns';
+import { formatRoomId } from '../../utils/formatRoomId';
 import { ExclamationTriangleIcon } from '@heroicons/react/20/solid';
 import Loader from '../Loader';
 import DashboardToggle from './DashboardToggle';
@@ -9,12 +10,13 @@ import { RootState } from '../../store';
 import { setActiveLabel } from '../../store/slices/liveSlice';
 import { analytics } from '../../utils/analytics';
 import { Room } from '../../types';
+import { toTitleCase } from '../../utils/string';
 
 interface DashboardProps {
   activeDashboard: string;
   onChangeDashboard: (dashboard: 'RoomDashboard1' | 'RoomDashboard2') => void;
 }
-
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 const Dashboard2 = ({ activeDashboard, onChangeDashboard }: DashboardProps) => {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
@@ -22,9 +24,9 @@ const Dashboard2 = ({ activeDashboard, onChangeDashboard }: DashboardProps) => {
   const [height, setHeight] = useState(0);
   const [errors] = useState<string[]>([]);
 
-  const rooms = useSelector((state: RootState) => state.live.rooms);
+  const rooms = useSelector((state: RootState) => state.main.rooms);
   const platform = useSelector((state: RootState) => state.main.platform);
-  const labels = useSelector((state: RootState) => state.live.labels || {});
+  const labels = useSelector((state: RootState) => state.main.labels || {});
   const activeLabel = useSelector((state: RootState) => state.live.activeLabel);
 
   useEffect(() => {
@@ -61,12 +63,23 @@ const Dashboard2 = ({ activeDashboard, onChangeDashboard }: DashboardProps) => {
       }
     : { time: '', day: '' };
 
+    const sortedRooms = useMemo(
+      () =>
+        rooms
+          .slice()
+          .sort((a, b) =>
+            collator.compare(formatRoomId(a.id), formatRoomId(b.id))
+          ),
+      [rooms]
+    );
+
   const displayRooms = activeLabel
-    ? rooms.filter((room) => room.label === activeLabel)
-    : rooms;
+    ? sortedRooms.filter(r => r.label === activeLabel)
+    : sortedRooms;
 
   const roomLabels = Object.keys(labels).map(label => {
     const total = rooms.filter(element => element.label === label);
+    const display = toTitleCase(labels[label] ?? label);
     const occupied = rooms.filter(element => element.label === label && !element.is_inactive);
     
     let status = 'All Inactive';
@@ -77,7 +90,7 @@ const Dashboard2 = ({ activeDashboard, onChangeDashboard }: DashboardProps) => {
     }
 
     return {
-      name: labels[label],
+      name: display,
       id: label,
       empty: occupied.length === 0,
       total: total.length,
@@ -86,12 +99,12 @@ const Dashboard2 = ({ activeDashboard, onChangeDashboard }: DashboardProps) => {
     }; }).sort((a, b) => b.total - a.total);
 
   const summary = {
-    empty: rooms.every(r => r.is_inactive),
-    occupied: rooms.every(r => !r.is_inactive),
-    status: rooms.filter(r => !r.is_inactive).length === rooms.length
+    empty: sortedRooms.every(r => r.is_inactive),
+    occupied: sortedRooms.every(r => !r.is_inactive),
+    status: rooms.filter(r => !r.is_inactive).length === sortedRooms.length
       ? 'All Active'
-      : rooms.filter(r => !r.is_inactive).length > 0
-        ? `${rooms.filter(r => !r.is_inactive).length} Active`
+      : sortedRooms.filter(r => !r.is_inactive).length > 0
+        ? `${sortedRooms.filter(r => !r.is_inactive).length} Active`
         : 'All Inactive'
   };
 
@@ -205,7 +218,7 @@ const Dashboard2 = ({ activeDashboard, onChangeDashboard }: DashboardProps) => {
                     </svg>
                   )}
                   <div className={`${room.is_inactive ? 'text-zinc-400' : 'text-zinc-600'} absolute left-0 bottom-5 sm:bottom-4 lg:bottom-5 w-full text-sm md:text-base lg:text-xl font-semibold pl-6 sm:pl-2 lg:pl-6 tracking-wide text-left text-wrap`}>
-                    <span className="mr-2">{room.id}</span>
+                    <span className="mr-2">{formatRoomId(room.id)}</span>
                     <span>{room.is_inactive ? 'Inactive' : 'Active'}</span>
                   </div>
                 </button>
@@ -295,7 +308,7 @@ const Dashboard2 = ({ activeDashboard, onChangeDashboard }: DashboardProps) => {
                       room.is_inactive ? 'text-zinc-400' : 'text-zinc-600'
                     } absolute left-4 bottom-4 text-sm font-semibold text-left text-wrap`}
                   >
-                    <span className="mr-2">{room.id}</span>
+                    <span className="mr-2">{formatRoomId(room.id)}</span>
                     <span>{room.is_inactive ? 'Inactive' : 'Active'}</span>
                   </div>
                   {errors.includes(room.id) && (

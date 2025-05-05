@@ -36,10 +36,23 @@ This application leverages various AWS services to provide real-time hotel occup
 ### 1.5 AWS WebSocket (API Gateway WebSocket)
 
 - **Purpose**: Enables real-time (bi-directional) communication for the **Live Dashboard**.  
-- **Usage**:
-  - The frontend connects to a WebSocket endpoint: `wss://<WS_API_ID>.execute-api.<REGION>.amazonaws.com/Prod?token={jwt}&hotelId={hotelID}`.
-  - On successful connection, the server sends an `INITIAL_DATA` message.
-  - The server pushes `ROOM_UPDATE` messages whenever a room’s occupancy state changes.
+- **Endpoint format**: wss://WS_ENDPOINT?token=<JWT>&hotelId=<HOTEL_ID>
+- **Handshake**  
+1. Client opens the URL above.  
+2. On `open`, the frontend sends an explicit  
+   ```json
+   { "type":"SUBSCRIBE_HOTEL", "payload":{ "hotelId":"<HOTEL_ID>" }, ... }
+   ```  
+   so the backend can support either query-string or message-based subscription.  
+3. A successful backend replies with an **`INITIAL_DATA`** snapshot (rooms + labels).  
+- **Keep-alive** – the client fires a PING every **30 000 ms**; the server should answer with its own `PING`.  
+- **Graceful close** – before calling `WebSocket.close()` the client emits a  
+```json
+{ "type":"DISCONNECT", "payload":null, ... }
+```
+so the backend can clean up connection state.
+
+Cross-tab resiliency – all messages are mirrored through a BroadcastChannel (websocket_messages) so multiple tabs stay in sync; a second channel (websocket_reconnect) lets any tab trigger a reconnect in its siblings.
 
 ---
 
@@ -52,26 +65,19 @@ This application leverages various AWS services to provide real-time hotel occup
    ```
    wss://<WS_ENDPOINT>?token={jwt}&hotelId={selectedHotel}
    ```
-3. On **open**:
-   - The service resets reconnect attempts and starts a periodic ping (`PING`) to keep the connection alive.
-4. On **message**:
-   - The data is dispatched to the application (usually via a Redux store or similar).
-   - The message is structured as:
-     ```json
-     {
-       "type": "ROOM_UPDATE" | "INITIAL_DATA" | "PING" | "ERROR",
-       "payload": {
-         // payload shape depends on the message type
-       }
-     }
-     ```
-5. On **close** or **error**:
-   - The service automatically attempts reconnection up to `maxReconnectAttempts`.
+3. **connect( )** | Skips if a socket is already `OPEN`.
+4. **CONNECTING → CONNECTED** | State is tracked in Redux-free internal enum.
+5. **SUBSCRIBE_HOTEL** | Sent immediately after `open`.
+6. **Ping loop** | Every 30 s; a server PING is echoed back for symmetry.
+7. **ACK bookkeeping** | Each outbound message is stored in `pendingMessages`; receipt of a message with the same `messageId` counts as an ACK and removes it.
+8. **Automatic reconnect** | Exponential back-off (1 s → 2 s → 4 s … up to 30 s) with **max 5 attempts**. State transitions to **FAILED** after that.
+9. **Cross-tab broadcast** | Every message is re-posted on `BroadcastChannel` so late-joining tabs receive the last `INITIAL_DATA`.
 
 ### 2.2 WebSocket Message Types
 
-- **INITIAL_DATA**  
-  - Emitted upon initial connection, contains the current state of rooms and labels.
+- **INITIAL_DATA**
+  - Server → Client
+  - Full snapshot on first connect or hotel-switch
   - **Payload Example**:
     ```json
     {
@@ -92,23 +98,40 @@ This application leverages various AWS services to provide real-time hotel occup
     }
     ```
 
-- **ROOM_UPDATE**  
-  - Emitted when a single room’s state changes.
+- **SUBSCRIBE_HOTEL**
+  - Client → Server
+  - Lets the same socket switch hotels without reconnecting
+  - **Payload Example**:
+    ```json
+    {
+      "hotelId": "string"
+    }
+    ```
+
+- **ROOM_UPDATE**
+  - Server → Client
+  - Emitted when a single or multiple rooms’s state changes.
   - **Payload Example**:
     ```json
     {
       "id": "102",
       "is_vacant": true,
-      "label": "suite",
       "is_inactive": false
     }
     ```
+
+- **DISCONNECT**
+  - Client → Server
+  - Graceful FIN before closing
+  - Null Payload
 
 - **PING**  
   - A heartbeat message sent by the client, or from the server to ensure the connection is alive.
 
 - **ERROR**  
   - Indicates an error occurred (e.g., invalid token, missing hotelId).
+
+> **Note on DEV mode** – When `import.meta.env.DEV` is true the `WebSocketProvider` seeds the Redux store with mock data and periodically dispatches `updateRoom()` without ever touching the network. This means local development works offline while exercising the same UI code paths.
 
 ---
 
@@ -352,7 +375,7 @@ sequenceDiagram
 
     Note left of Client: Meanwhile, WebSocket connects
 
-    Client->>WebSocket: wss://<endpoint>?token=<JWT>&hotelId=<hotelId>
+    Client->>WebSocket: wss://WS_ENDPOINT?token=<JWT>&hotelId=<hotelId>
     WebSocket->>Client: type=INITIAL_DATA, payload={ ... }
 
     WebSocket->>Client: type=ROOM_UPDATE, payload={ ... }

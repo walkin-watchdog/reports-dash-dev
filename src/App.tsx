@@ -11,6 +11,7 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { LinearProgress, Box, useTheme } from '@mui/material';
 import SkipLink from './components/common/SkipLink';
+import WebSocketProvider from './providers/WebSocketProvider';
 
 // Lazy load components
 const Dashboard = lazy(() => import('./components/dashboard/Dashboard'));
@@ -48,9 +49,11 @@ function App() {
             <Route
               path="/live/*"
               element={<PrivateRoute element={
-                <LiveErrorBoundary>
-                  <LiveDashboard />
-                </LiveErrorBoundary>
+                <WebSocketProvider>
+                  <LiveErrorBoundary>
+                    <LiveDashboard />
+                  </LiveErrorBoundary>
+                </WebSocketProvider>
               } />}
             />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

@@ -1,4 +1,3 @@
-@@ .. @@
  export interface Room {
    id: string;
    is_vacant: boolean;

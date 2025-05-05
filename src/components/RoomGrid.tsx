@@ -1,5 +1,6 @@
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { Room } from '../types';
+import { formatRoomId } from '../utils/formatRoomId';
 import { roomGridStyles as styles } from './styles/RoomGrid.styles';
 
 interface RoomGridProps {
@@ -51,7 +52,7 @@ const RoomGrid = ({ rooms, height, platform, onRoomClick, errors = [] }: RoomGri
                 </svg>
               )}
               <div className={styles.text(room.is_vacant, room.is_inactive, errors.includes(room.id))}>
-                <span className="mr-2 text-lg sm:text-xl lg:text-2xl">{room.id}</span>
+                <span className="mr-2 text-lg sm:text-xl lg:text-2xl">{formatRoomId(room.id)}</span>
                 <span className="text-lg sm:text-xl lg:text-2xl">{room.is_vacant ? 'Vacant' : 'Occupied'}</span>
               </div>
               {(errors.includes(room.id) || (room.is_vacant && !room.is_inactive)) && (

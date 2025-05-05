@@ -8,12 +8,19 @@ interface AnalyticsEvent {
   timestamp: number;
 }
 
+const API_BASE = import.meta.env.DEV ? '' : import.meta.env.VITE_API_ENDPOINT;
+
 class Analytics {
   private static instance: Analytics;
   private events: AnalyticsEvent[] = [];
   private performanceMetrics: Map<string, number[]> = new Map();
+  private readonly MAX_EVENTS = 1000;
+  private readonly FLUSH_INTERVAL_MS = 60000; // 60 seconds
 
   private constructor() {
+    // Start periodic flush
+    setInterval(() => this.flush(), this.FLUSH_INTERVAL_MS);
+
     // Initialize performance observer
     if (typeof window !== 'undefined') {
       const observer = new PerformanceObserver((list) => {
@@ -43,7 +50,11 @@ class Analytics {
     };
 
     this.events.push(event);
-    this.sendToAnalyticsService(event);
+
+    // Flush if batch size reaches threshold
+    if (this.events.length >= this.MAX_EVENTS) {
+      this.flush();
+    }
   }
 
   public trackPageView(path: string) {
@@ -63,7 +74,7 @@ class Analytics {
       }
     }
 
-    this.trackEvent('User Action', action, details, undefined);
+    this.trackEvent('User Action', action, details);
   }
 
   public logPerformanceMetric(name: string, duration: number) {
@@ -72,18 +83,32 @@ class Analytics {
     }
     this.performanceMetrics.get(name)?.push(duration);
 
-    // Send to analytics service if average exceeds threshold
     const metrics = this.performanceMetrics.get(name) || [];
     const average = metrics.reduce((a, b) => a + b, 0) / metrics.length;
-    
-    if (average > 1000) { // 1 second threshold
+
+    if (average > 1000) {
       this.trackEvent('Performance', 'Slow Operation', name, average);
     }
   }
 
-  private sendToAnalyticsService(event: AnalyticsEvent) {
-    // In a real implementation, this would send data to your analytics service
-    console.log('Analytics event:', event);
+  private async flush() {
+    if (this.events.length === 0) return;
+
+    const eventsToSend = [...this.events];
+    this.events = [];
+
+    try {
+      await fetch(`${API_BASE}/api/v1/analytics`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ events: eventsToSend }),
+      });
+    } catch (error) {
+      console.error('Failed to flush analytics:', error);
+      this.events.unshift(...eventsToSend);
+    }
   }
 
   public getEvents(): AnalyticsEvent[] {

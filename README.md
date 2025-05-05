@@ -212,11 +212,14 @@ REST API Endpoints:
 
 WebSocket Integration:
 
-- Connection: `wss://endpoint?token={jwt}&hotelId={id}`
+- Connection: `wss://WS_ENDPOINT?token={jwt}&hotelId={id}`
 - Message Types:
   - `INITIAL_DATA` - Initial room state
   - `ROOM_UPDATE` - Real-time room updates
   - `PING` - Connection health check
+  - `SUBSCRIBE_HOTEL` - Lets the same socket switch hotels without reconnecting
+  - `DISCONNECT` - Graceful FIN before closing
+  - `ERROR` - Indicates an error
 
 ### Request/Response Flow
 
@@ -333,7 +336,3 @@ WebSocket Integration:
 - Cache optimization
 - API batching
 - State normalization
-
-## License
-
-MIT License - see LICENSE file for details

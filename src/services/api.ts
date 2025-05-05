@@ -231,19 +231,16 @@ export const login = async (
     password === 'demo'
   ) {
     return {
-      statusCode: 200,
-      body: {
-        message: 'Login successful',
-        token:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.signature',
-        user: {
-          id: 'demo-user',
-          emailid: email,
-          hotels: [
-            { id: 'hotel1', hotelname: mockHotels.hotel1.name },
-            { id: 'hotel2', hotelname: mockHotels.hotel2.name },
-          ],
-        },
+      message: 'Login successful',
+      token:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.signature',
+      user: {
+        id: 'demo-user',
+        emailid: email,
+        hotels: [
+          { id: 'hotel1', hotelname: mockHotels.hotel1.name },
+          { id: 'hotel2', hotelname: mockHotels.hotel2.name },
+        ],
       },
     };
   }
@@ -253,7 +250,15 @@ export const login = async (
       username: email,
       password: password,
     });
-    return response.data;
+    const data =
+      typeof response.data.body === "string"
+        ? JSON.parse(response.data.body)
+        : response.data.body || response.data;
+
+    if (data.status === "error") {
+      throw new Error(data.message);
+    }
+    return data;
   } catch (error) {
     throw handleApiError(error);
   }
@@ -406,7 +411,13 @@ export const getOccupancyData = async (
       getEndpoint(config.endpoints.hotel.occupancy, { hotelId }),
       { params: { date } }
     );
-    return response.data;
+    return {
+      statusCode: response.status,
+      body:
+        typeof response.data === 'string'
+          ? JSON.parse(response.data)
+          : response.data,
+    };
   } catch (error) {
     throw handleApiError(error);
   }
@@ -458,7 +469,13 @@ export const getOccupancyRange = async (
       getEndpoint(config.endpoints.hotel.occupancyRange, { hotelId }),
       { params: { startDate, endDate } }
     );
-    return response.data;
+    const raw = Array.isArray(response.data)
+      ? response.data
+      : JSON.parse(response.data);
+    return raw.map((day: any) => ({
+      statusCode: response.status,
+      body: day,
+    }));    
   } catch (error) {
     throw handleApiError(error);
   }

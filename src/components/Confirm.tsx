@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { confirmStyles as styles } from './styles/Confirm.styles';
+import { formatRoomId } from '../utils/formatRoomId';
 
 interface ConfirmProps {
   isVacant?: boolean;
@@ -52,7 +53,7 @@ const Confirm = ({ isVacant = false, room = '', onClose }: ConfirmProps) => {
               <Dialog.Panel className={styles.panel}>
                 <div>
                   <div className={styles.imageWrapper}>
-                    <img className={styles.image} src="/images/Logo.png" alt="Home App" />
+                    <img className={styles.image} src="/images/logo.jpg" alt="Home App" />
                   </div>
                   <div className={styles.contentWrapper}>
                     <Dialog.Title as="h3" className={styles.title}>
@@ -60,7 +61,7 @@ const Confirm = ({ isVacant = false, room = '', onClose }: ConfirmProps) => {
                     </Dialog.Title>
                     <div className="mt-2">
                       <p className={styles.message}>
-                        Choose Yes to {isVacant ? 'Check-out' : 'Check-in'} Room no. {room}
+                        Choose Yes to {isVacant ? 'Check-out' : 'Check-in'} Room no. {formatRoomId(room)}
                       </p>
                     </div>
                   </div>

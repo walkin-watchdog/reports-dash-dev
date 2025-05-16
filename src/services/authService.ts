@@ -1,7 +1,7 @@
 import { post } from '@aws-amplify/api';
 import { cache } from '../utils/caching';
 import { isTokenExpired, isTokenNearExpiry } from '../utils/errorHandling';
-import { AuthResponse } from '../types/api';
+import { JWTPayload, AuthResponse } from '../types/api';
 import { Amplify } from '@aws-amplify/core';
 
 const API_NAME = 'native';

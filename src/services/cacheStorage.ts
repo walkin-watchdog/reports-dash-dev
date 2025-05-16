@@ -16,6 +16,8 @@ class CacheStorage {
   private static instance: CacheStorage;
   private readonly VERSION = '1.0.0';
   private readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
+  private readonly ROOM_TTL = 2 * 60 * 1000; // 2 minutes for rooms (more frequent updates)
+  private readonly LABEL_TTL = 24 * 60 * 60 * 1000; // 24 hours for labels (less frequent updates)
 
   private constructor() {}
 
@@ -79,7 +81,23 @@ class CacheStorage {
   }
 
   async setRooms(hotelId: string, rooms: Room[]): Promise<void> {
-    await this.set(`rooms_${hotelId}`, rooms);
+    await this.set(`rooms_${hotelId}`, rooms, this.ROOM_TTL);
+  }
+
+  async updateRoom(payload: {hotelId: string, id: string; is_vacant: boolean; is_inactive: boolean }): Promise<void> {
+    const hotelId = '${hotelId}';
+    const rooms = await this.getRooms(hotelId);
+    if (!rooms) return;
+
+    const idx = rooms.findIndex(r => r.id === payload.id);
+    if (idx === -1) return;
+
+    rooms[idx] = {
+      ...rooms[idx],
+      is_vacant: payload.is_vacant,
+      is_inactive: payload.is_inactive,
+    };
+    await this.setRooms(hotelId, rooms);
   }
 
   async getLabels(): Promise<Record<string, string> | null> {
@@ -87,7 +105,7 @@ class CacheStorage {
   }
 
   async setLabels(labels: Record<string, string>): Promise<void> {
-    await this.set('room_labels', labels);
+    await this.set('room_labels', labels, this.LABEL_TTL);
   }
 }
 

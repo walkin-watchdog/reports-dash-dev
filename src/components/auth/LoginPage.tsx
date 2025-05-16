@@ -31,9 +31,9 @@ const LoginPage: React.FC = () => {
     setLoading(true);
     try {
       const response = await login(email, password);
-      localStorage.setItem('auth_token', response.body.token);
+      localStorage.setItem('auth_token', response.token);
       dispatch(
-        setCredentials({ user: response.body.user, token: response.body.token })
+        setCredentials({ user: response.user, token: response.token })
       );
       navigate('/dashboard');
     } catch (err: any) {
@@ -48,9 +48,9 @@ const LoginPage: React.FC = () => {
     setLoading(true);
     try {
       const response = await login('demo@example.com', 'demo');
-      localStorage.setItem('auth_token', response.body.token);
+      localStorage.setItem('auth_token', response.token);
       dispatch(
-        setCredentials({ user: response.body.user, token: response.body.token })
+        setCredentials({ user: response.user, token: response.token })
       );
       navigate('/dashboard');
     } catch (err: any) {
@@ -72,7 +72,7 @@ const LoginPage: React.FC = () => {
             ) : (
               <Box
                 component="img"
-                src="src/images/logo.jpg"
+                src="/images/logo.jpg"
                 alt="Walk-in Watchdog Logo"
                 onError={() => setLogoError(true)}
                 sx={componentStyles.loginPage.logo}

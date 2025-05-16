@@ -1,6 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { User } from '../../types/api';
-import { jwtDecode } from 'jwt-decode';
 
 interface AuthState {
   user: User | null;
@@ -29,12 +28,10 @@ const authSlice = createSlice({
       state.token = token;
       state.isAuthenticated = true;
       state.selectedHotel = user.hotels[0]?.id || null;
-      // Store selected hotel in localStorage
       localStorage.setItem('selectedHotel', user.hotels[0]?.id || '');
     },
     setSelectedHotel: (state, action: PayloadAction<string>) => {
       state.selectedHotel = action.payload;
-      // Update selected hotel in localStorage
       localStorage.setItem('selectedHotel', action.payload);
     },
     logout: (state) => {
@@ -42,8 +39,8 @@ const authSlice = createSlice({
       state.token = null;
       state.isAuthenticated = false;
       state.selectedHotel = null;
-      // Clear selected hotel from localStorage
       localStorage.removeItem('selectedHotel');
+      localStorage.removeItem('token');
     },
   },
 });

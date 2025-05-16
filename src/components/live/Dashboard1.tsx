@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { format } from 'date-fns';
+import { formatRoomId } from '../../utils/formatRoomId';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import Confirm from '../Confirm';
 import Loader from '../Loader';
@@ -12,12 +13,15 @@ import { RootState } from '../../store';
 import { setActiveLabel } from '../../store/slices/liveSlice';
 import { analytics } from '../../utils/analytics';
 import { Room } from '../../types';
+import { toTitleCase } from '../../utils/string';
+import { WebSocketService } from '../../services/websocket';
 
 interface DashboardProps {
   activeDashboard: string;
   onChangeDashboard: (dashboard: 'RoomDashboard1' | 'RoomDashboard2') => void;
 }
 
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 const Dashboard1 = ({ activeDashboard, onChangeDashboard }: DashboardProps) => {
   const dispatch = useDispatch();
   const { createRipple } = useApp();
@@ -29,9 +33,9 @@ const Dashboard1 = ({ activeDashboard, onChangeDashboard }: DashboardProps) => {
   const [errors] = useState<string[]>([]);
   const [height, setHeight] = useState(0);
 
-  const rooms = useSelector((state: RootState) => state.live.rooms);
+  const rooms = useSelector((state: RootState) => state.main.rooms);
   const platform = useSelector((state: RootState) => state.main.platform);
-  const labels = useSelector((state: RootState) => state.live.labels || {});
+  const labels = useSelector((state: RootState) => state.main.labels || {});
   const activeLabel = useSelector((state: RootState) => state.live.activeLabel);
 
   const { containerRef, pullLoading, handleTouchStart, handleTouchMove, handleTouchEnd } =
@@ -76,7 +80,14 @@ const Dashboard1 = ({ activeDashboard, onChangeDashboard }: DashboardProps) => {
       setNextRoom(null);
       return;
     }
-    // Room state changes are handled by WebSocket updates
+    const ws = WebSocketService.getInstance();
+    ws.sendRoomUpdate({
+     id:         nextRoom!,
+     is_vacant:  nextState!,
+   });
+
+    setNextState(null);
+    setNextRoom(null);
   };
 
   const beautyDate = date
@@ -86,13 +97,24 @@ const Dashboard1 = ({ activeDashboard, onChangeDashboard }: DashboardProps) => {
       }
     : { time: '', day: '' };
 
+    const sortedRooms = useMemo(
+      () =>
+        rooms
+          .slice()
+          .sort((a, b) =>
+            collator.compare(formatRoomId(a.id), formatRoomId(b.id))
+          ),
+      [rooms]
+    );
+
   const displayRooms = activeLabel
-    ? rooms.filter((room) => room.label === activeLabel)
-    : rooms;
+    ? sortedRooms.filter(r => r.label === activeLabel)
+    : sortedRooms;
 
   const roomLabels = Object.keys(labels)
     .map((label) => {
       const total = rooms.filter((element) => element.label === label);
+      const display = toTitleCase(labels[label] ?? label);
       const occupied = rooms.filter((element) => element.label === label && !element.is_vacant);
       const active = rooms.filter((element) => element.label === label && !element.is_inactive);
 
@@ -111,7 +133,7 @@ const Dashboard1 = ({ activeDashboard, onChangeDashboard }: DashboardProps) => {
       }
 
       return {
-        name: labels[label],
+        name: display,
         id: label,
         total: total.length,
         status,
@@ -126,22 +148,22 @@ const Dashboard1 = ({ activeDashboard, onChangeDashboard }: DashboardProps) => {
     .sort((a, b) => b.total - a.total);
 
   const summary = {
-    empty: rooms.every((r) => r.is_vacant),
-    occupied: rooms.every((r) => !r.is_vacant),
+    empty: sortedRooms.every((r) => r.is_vacant),
+    occupied: sortedRooms.every((r) => !r.is_vacant),
     status:
-      rooms.filter((r) => !r.is_vacant).length === rooms.length
+      rooms.filter((r) => !r.is_vacant).length === sortedRooms.length
         ? 'All Occupied'
-        : rooms.filter((r) => !r.is_vacant).length > 0
-        ? `${rooms.filter((r) => !r.is_vacant).length} Occupied`
+        : sortedRooms.filter((r) => !r.is_vacant).length > 0
+        ? `${sortedRooms.filter((r) => !r.is_vacant).length} Occupied`
         : 'All Vacant',
     activity:
-      rooms.filter((r) => !r.is_inactive).length === rooms.length
+      rooms.filter((r) => !r.is_inactive).length === sortedRooms.length
         ? 'All Active'
-        : rooms.filter((r) => !r.is_inactive).length > 0
-        ? `${rooms.filter((r) => !r.is_inactive).length} Active`
+        : sortedRooms.filter((r) => !r.is_inactive).length > 0
+        ? `${sortedRooms.filter((r) => !r.is_inactive).length} Active`
         : 'All Inactive',
-    activity_count: rooms.filter((r) => !r.is_inactive).length,
-    occupancy: rooms.filter((r) => !r.is_vacant).length,
+    activity_count: sortedRooms.filter((r) => !r.is_inactive).length,
+    occupancy: sortedRooms.filter((r) => !r.is_vacant).length,
   };
 
   if (loading) return <Loader />;
@@ -361,7 +383,7 @@ const Dashboard1 = ({ activeDashboard, onChangeDashboard }: DashboardProps) => {
                         : 'text-zinc-600'
                     } absolute left-0 bottom-5 w-full pl-6 text-left text-wrap font-semibold`}
                   >
-                    <span className="mr-2">{room.id}</span>
+                    <span className="mr-2">{formatRoomId(room.id)}</span>
                     <span>{room.is_vacant ? 'Vacant' : 'Occupied'}</span>
                   </div>
                   {(errors.includes(room.id) || (room.is_vacant && !room.is_inactive)) && (
@@ -512,7 +534,7 @@ const Dashboard1 = ({ activeDashboard, onChangeDashboard }: DashboardProps) => {
                         : 'text-zinc-600'
                     } absolute left-0 bottom-4 w-full text-sm font-semibold pl-4 text-left text-wrap`}
                   >
-                    <span className="mr-2">{room.id}</span>
+                    <span className="mr-2">{formatRoomId(room.id)}</span>
                     <span>{room.is_vacant ? 'Vacant' : 'Occupied'}</span>
                   </div>
                   {(errors.includes(room.id) || (room.is_vacant && !room.is_inactive)) && (

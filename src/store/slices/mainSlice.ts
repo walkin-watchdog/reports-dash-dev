@@ -53,6 +53,15 @@ const mainSlice = createSlice({
         room.is_vacant = action.payload.state;
       }
     },
+    setRoomInactive: (
+      state,
+      action: PayloadAction<{ id: string; inactive: boolean }>
+    ) => {
+      const room = state.rooms.find(r => r.id === action.payload.id);
+      if (room) {
+        room.is_inactive = action.payload.inactive;
+      }
+    },
     setDeviceId: (state, action: PayloadAction<Record<string, any>>) => {
       state.device_id = action.payload;
     },
@@ -69,6 +78,7 @@ export const {
   setLog,
   setEntities,
   setRoomState,
+  setRoomInactive,
   setDeviceId,
   setWaiting,
   setPlatform

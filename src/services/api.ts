@@ -411,7 +411,13 @@ export const getOccupancyData = async (
       getEndpoint(config.endpoints.hotel.occupancy, { hotelId }),
       { params: { date } }
     );
-    return response.data;
+    return {
+      statusCode: response.status,
+      body:
+        typeof response.data === 'string'
+          ? JSON.parse(response.data)
+          : response.data,
+    };
   } catch (error) {
     throw handleApiError(error);
   }
@@ -463,7 +469,13 @@ export const getOccupancyRange = async (
       getEndpoint(config.endpoints.hotel.occupancyRange, { hotelId }),
       { params: { startDate, endDate } }
     );
-    return response.data;
+    const raw = Array.isArray(response.data)
+      ? response.data
+      : JSON.parse(response.data);
+    return raw.map((day: any) => ({
+      statusCode: response.status,
+      body: day,
+    }));    
   } catch (error) {
     throw handleApiError(error);
   }

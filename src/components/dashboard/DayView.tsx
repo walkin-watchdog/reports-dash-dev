@@ -26,6 +26,7 @@ import {
   ToggleButtonGroup,
   useTheme,
   Tooltip,
+  CircularProgress,
 } from '@mui/material';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import { DatePicker } from '@mui/x-date-pickers';
@@ -61,7 +62,6 @@ import {
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { OccupancyRecord } from '../../types/api';
-import SkeletonLoader from '../common/SkeletonLoader';
 import FilterAltOffIcon from '@mui/icons-material/FilterAltOff';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { useTheme as useThemeInListItem } from '@mui/material';
@@ -336,17 +336,10 @@ const DayView: React.FC<DayViewProps> = ({
     > = {};
     categories.forEach((category) => {
       const categoryRecords = data.filter((r) => r.room_category === category);
-      const distinctRoomIds = Array.from(
-        new Set(categoryRecords.map((r) => r.roomid))
-      );
-      const occupiedRooms = distinctRoomIds.length;
-      const totalRooms = summary.categoryTotals
-        ? summary.categoryTotals[category]
-        : summary.occupiedRooms > 0
-        ? Math.round(
-            (occupiedRooms / summary.occupiedRooms) * summary.totalRooms
-          )
-        : 0;
+      const totalRooms = new Set(categoryRecords.map((r) => r.roomid)).size;
+      const occupiedRooms = categoryRecords.filter(
+        (r) => r.check_in_unixstamp != null
+      ).length;
       const occupancyPercentage =
         totalRooms === 0 ? 0 : Math.round((occupiedRooms / totalRooms) * 100);
       categoryStats[category] = {
@@ -640,7 +633,16 @@ const DayView: React.FC<DayViewProps> = ({
   };
 
   if (loading) {
-    return <SkeletonLoader type="summary" />;
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
+        <CircularProgress />
+      </Box>
+    );
   }
 
   if (!occupancyData.length) {
@@ -900,7 +902,7 @@ const DayView: React.FC<DayViewProps> = ({
                     aria-label="overall room status tabs"
                   >
                     {[
-                      'All Room',
+                      'All Rooms',
                       'Check-ins',
                       'Early Check-ins',
                       'Check-outs',

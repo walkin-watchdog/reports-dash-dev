@@ -12,6 +12,7 @@ import {
   Alert,
   Tooltip,
   useTheme,
+  CircularProgress,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers';
 import { Line, Doughnut } from 'react-chartjs-2';
@@ -39,7 +40,6 @@ import {
   LineChart,
 } from 'lucide-react';
 import DayView from './DayView';
-import SkeletonLoader from '../common/SkeletonLoader';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import {
   Chart as ChartJS,
@@ -101,35 +101,27 @@ export interface OccupancyRecord {
 
 const getCategoryStatsForSingleDay = (
   records: OccupancyRecord[],
-  daySummary: {
-    totalRooms: number;
-    occupiedRooms: number;
-    occupancyPercentage: number;
-    categoryTotals?: Record<string, number>;
-  }
+  daySummary: { totalRooms: number; occupiedRooms: number; occupancyPercentage: number }
 ) => {
   const cats = Array.from(new Set(records.map((r) => r.room_category)));
-  const stats: Record<
-    string,
-    { totalRooms: number; occupiedRooms: number; occupancyPercentage: number }
-  > = {};
+  const stats: Record<string, { totalRooms: number; occupiedRooms: number; occupancyPercentage: number }> = {};
+
   cats.forEach((category) => {
     const categoryRecords = records.filter((r) => r.room_category === category);
-    const distinctRoomIds = Array.from(
-      new Set(categoryRecords.map((r) => r.roomid))
-    );
-    const occupiedRooms = distinctRoomIds.length;
-    const totalRooms = daySummary.categoryTotals
-      ? daySummary.categoryTotals[category]
-      : daySummary.occupiedRooms > 0
-      ? Math.round(
-          (occupiedRooms / daySummary.occupiedRooms) * daySummary.totalRooms
-        )
-      : 0;
+
+    // total rooms in this category that day
+    const totalRooms = new Set(categoryRecords.map((r) => r.roomid)).size;
+    // only count real check-ins
+    const occupiedRooms = categoryRecords.filter(
+      (r) => r.check_in_unixstamp != null
+    ).length;
+
     const occupancyPercentage =
       totalRooms === 0 ? 0 : Math.round((occupiedRooms / totalRooms) * 100);
+
     stats[category] = { totalRooms, occupiedRooms, occupancyPercentage };
   });
+
   return stats;
 };
 
@@ -494,7 +486,16 @@ const RangeView: React.FC<RangeViewProps> = ({
   };
 
   if (loading) {
-    return <SkeletonLoader type="chart" />;
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
+        <CircularProgress />
+      </Box>
+    );
   }
 
   if (Object.keys(rangeData).length === 0) {
@@ -631,7 +632,7 @@ const RangeView: React.FC<RangeViewProps> = ({
                           </Typography>
                         </Grid>
                         <Grid item xs={6}>
-                          <Typography variant="body2">Room Vacant:</Typography>
+                          <Typography variant="body2">Rooms Vacant:</Typography>
                           <Typography variant="h6">
                             {aggregatedRangeTotalSum -
                               aggregatedRangeOccupiedSum}

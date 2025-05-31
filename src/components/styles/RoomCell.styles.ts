@@ -1,4 +1,4 @@
-export const roomGridStyles = {
+export const roomCellStyles = {
   container: (_platform: { os: string }) => 
     `flex-1 pr-3 overflow-y-auto overflow-x-hidden h-full py-4 sm:py-0 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-600 pb-1`,
   grid: (platform: { os: string }) => 
